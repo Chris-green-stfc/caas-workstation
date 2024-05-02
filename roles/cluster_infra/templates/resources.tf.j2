@@ -68,7 +68,7 @@ resource "openstack_compute_instance_v2" "cluster_server" {
   }
 
   #security_groups = ["${openstack_networking_secgroup_v2.cluster_secgroup.name}"]
-  security_groups = ["aa-test1-workstation"]
+  security_groups = ["azimuth-default"]
   user_data = <<-EOF
   #cloud-config
   user:
