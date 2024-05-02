@@ -67,7 +67,8 @@ resource "openstack_compute_instance_v2" "cluster_server" {
     name = "{{ cluster_network }}"
   }
 
-  security_groups = ["${openstack_networking_secgroup_v2.cluster_secgroup.name}"]
+  #security_groups = ["${openstack_networking_secgroup_v2.cluster_secgroup.name}"]
+  security_groups = [aa-test1-workstation]
   user_data = <<-EOF
   #cloud-config
   user:
@@ -96,7 +97,6 @@ resource "openstack_compute_instance_v2" "cluster_server" {
     azimuth_user_id = "${data.openstack_identity_auth_scope_v3.scope.user_id}"
     azimuth_project_name = "${data.openstack_identity_auth_scope_v3.scope.project_name}"
     azimuth_project_id = "${data.openstack_identity_auth_scope_v3.scope.project_id}"
-    my_metadata = "{{ c_my_metadata }}"
   }
 }
 
