@@ -1,9 +1,7 @@
-# This is used to determine the image to use unless explicitly patching
-output "cluster_image" {
-  description = "The id of the image used to build the cluster nodes"
-  value       = "{{ cluster_image }}"
+output "cluster_gateway_ip" {
+  description = "The address of the gateway used to contact the cluster nodes"
+  value       = "{{ zenith_sshd_host }}"
 }
-
 output "cluster_nodes" {
   description = "A list of the nodes in the cluster, used to populate the Ansible inventory"
   value       = concat(
