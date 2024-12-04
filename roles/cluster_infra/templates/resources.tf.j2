@@ -110,35 +110,11 @@ resource "openstack_networking_port_v2" "cluster_storage" {
 ##### Cluster nodes
 #####
 
-resource "openstack_compute_instance_v2" "cluster_server" {
-  name      = "{{ cluster_name }}-{{ cluster_type }}"
-  image_id  = "{{ cluster_image }}"
-  flavor_id = "{{ cluster_flavor }}"
-
-  network {
-    port = openstack_networking_port_v2.cluster.id
-  }
-
-  {% if cluster_storage_network is defined %}
-  network {
-    port = openstack_networking_port_v2.cluster_storage.id
-  }
-  {% endif %}
-
-  user_data = <<-EOF
-  #cloud-config
-  user:
-    ssh_authorized_keys:
-      - {{ cluster_deploy_ssh_public_key }}
-{% if cluster_user_ssh_public_key is defined and cluster_user_ssh_public_key %}
-  users:
-  - name: azimuth
-    ssh_authorized_keys:
-      - {{ cluster_user_ssh_public_key }}
-{% endif %}
-  EOF
-
-  metadata = {
+# Declare a local value based on the metadata, so we can trigger a rebuild from it
+# By default, changing the metadata just updates the metadata on the current instance
+# However because of how we use metadata, we want to trigger a rebuild
+locals {
+  instance_metadata = {
     zenith_volume_id = "${openstack_blockstorage_volume_v3.zenith_volume.id}"
     data_volume_id = "${openstack_blockstorage_volume_v3.data_volume.id}"
     zenith_registrar_url = "{{ zenith_registrar_url }}"
@@ -167,6 +143,48 @@ resource "openstack_compute_instance_v2" "cluster_server" {
         ansible_init_coll_{{ loop.index0 }}_source = "{{ collection.source }}"
       {% endif %}
     {% endfor %} 
+  }
+}
+
+# A data resource that changes when the metadata changes
+# We can use this to trigger a rebuild of the server
+resource "terraform_data" "instance_metadata" {
+  input = local.instance_metadata
+}
+
+resource "openstack_compute_instance_v2" "cluster_server" {
+  name      = "{{ cluster_name }}-{{ cluster_type }}"
+  image_id  = "{{ cluster_image }}"
+  flavor_id = "{{ cluster_flavor }}"
+
+  network {
+    port = openstack_networking_port_v2.cluster.id
+  }
+
+  {% if cluster_storage_network is defined %}
+  network {
+    port = openstack_networking_port_v2.cluster_storage.id
+  }
+  {% endif %}
+
+  user_data = <<-EOF
+  #cloud-config
+  user:
+    ssh_authorized_keys:
+      - {{ cluster_deploy_ssh_public_key }}
+{% if cluster_user_ssh_public_key is defined and cluster_user_ssh_public_key %}
+  users:
+  - name: azimuth
+    ssh_authorized_keys:
+      - {{ cluster_user_ssh_public_key }}
+{% endif %}
+  EOF
+
+  metadata = local.instance_metadata
+
+  # Rebuild the server when the metadata changes
+  lifecycle {
+    replace_triggered_by = [terraform_data.instance_metadata]
   }
 }
 
